@@ -1,20 +1,22 @@
-﻿require('dotenv').config(); // טעינת משתני סביבה מהקובץ .env
+﻿require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 
 const app = express();
-
-// --- Middleware ---
 app.use(cors());
 app.use(express.json());
 
-// --- חיבור ל-MongoDB ---
-mongoose.connect(process.env.MONGO_URI)
-    .then(() => console.log("✅ Connected to Secure MongoDB!"))
-    .catch(err => console.error("❌ MongoDB Connection Error:", err));
+// 1. הגדרות ה-AI - שימוש בנתיב הישיר והיציב
+// וודא שבקובץ ה-.env המפתח שלך (itai) מעודכן
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY.trim();
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${GEMINI_API_KEY}`;
 
-// --- הגדרת המודל (Schema) ---
+// 2. חיבור ל-MongoDB
+mongoose.connect(process.env.MONGO_URI)
+    .then(() => console.log("✅ מחובר בהצלחה ל-MongoDB!"))
+    .catch(err => console.error("❌ שגיאת מונגו:", err));
+
 const Expense = mongoose.model('Expense', {
     item: String,
     amount: Number,
@@ -22,72 +24,80 @@ const Expense = mongoose.model('Expense', {
     date: { type: Date, default: Date.now }
 });
 
-// --- נתיבים (Routes) ---
-
-// 1. קבלת כל ההוצאות (ממוין מהחדש ביותר לישן ביותר)
-app.get('/expenses', async (req, res) => {
-    try {
-        const expenses = await Expense.find().sort({ date: -1 });
-        res.json(expenses);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// 2. הוספה חכמה (Mock AI - מדמה ניתוח טקסט)
-app.post('/add-ai-expense', async (req, res) => {
-    const { text } = req.body;
-    console.log("Processing text:", text);
-
-    if (!text) return res.status(400).send("No text provided");
-
-    // לוגיקה פשוטה לזיהוי מספר וקטגוריה
-    const amountMatch = text.match(/\d+/); 
-    const amount = amountMatch ? parseInt(amountMatch[0]) : 0;
-    
-    let category = "כללי";
-    if (text.includes("אוכל") || text.includes("פיצה") || text.includes("סושי")) category = "מזון";
-    if (text.includes("מקלדת") || text.includes("משחק") || text.includes("גיימינג")) category = "פנאי";
-    if (text.includes("אוטובוס") || text.includes("מונית") || text.includes("דלק")) category = "תחבורה";
-
-    const extractedData = {
-        item: text.replace(/[0-9]/g, '').replace('שקל', '').replace('ב-', '').trim() || "הוצאה חדשה",
-        amount: amount,
-        category: category
+// 3. פונקציית ה-Fetch עם הנחיה (Prompt) נוקשה יותר למניעת שגיאות
+async function getAIAnalysis(text) {
+    const payload = {
+        contents: [{
+            parts: [{
+                text: `You are a financial data extractor. 
+                Task: Convert the user text into a JSON array of objects.
+                User text: "${text}"
+                Rules:
+                1. Each object MUST have: "item" (string), "amount" (number), "category" (Food, Leisure, Transport, or General).
+                2. Translate "item" to Hebrew.
+                3. Return ONLY the raw JSON array. No markdown, no backticks, no extra text.
+                Example: [{"item": "לחם", "amount": 10, "category": "Food"}]`
+            }]
+        }]
     };
 
+    const response = await fetch(GEMINI_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error?.message || "AI Request failed");
+
+    return data.candidates[0].content.parts[0].text;
+}
+
+// 4. נתיב ההוספה החכמה עם "מנגנון הגנה"
+app.post('/add-ai-expense', async (req, res) => {
+    const { text } = req.body;
+    console.log("📝 מנתח בקשה חדשה:", text);
+
     try {
-        const newExpense = new Expense(extractedData);
-        await newExpense.save();
-        res.json(newExpense);
+        const aiResponse = await getAIAnalysis(text);
+        
+        // ניקוי תשובת ה-AI
+        const cleanedText = aiResponse.replace(/```json/g, "").replace(/```/g, "").trim();
+        const aiResults = JSON.parse(cleanedText);
+        const resultsArray = Array.isArray(aiResults) ? aiResults : [aiResults];
+
+        // --- מנגנון הגנה: מסננים רק נתונים תקינים (מונע שורות ריקות בטבלה) ---
+        const validExpenses = resultsArray.filter(exp => 
+            exp.item && 
+            exp.item !== "---" && 
+            typeof exp.amount === 'number' && 
+            exp.amount > 0
+        );
+
+        if (validExpenses.length === 0) {
+            console.log("⚠️ ה-AI החזיר נתונים לא תקינים, השמירה בוטלה.");
+            return res.status(400).json({ error: "לא ניתן היה להבין את ההוצאה" });
+        }
+
+        const saved = await Expense.insertMany(validExpenses);
+        console.log("✅ נשמר בהצלחה:", saved);
+        res.json(saved);
     } catch (err) {
-        res.status(500).json({ error: "Failed to save AI expense" });
+        console.error("❌ שגיאה בתהליך:", err.message);
+        res.status(500).json({ error: "שגיאת שרת", details: err.message });
     }
 });
 
-// 3. הוספה ידנית (הטופס הרגיל)
-app.post('/add-expense', async (req, res) => {
-    try {
-        const newExpense = new Expense(req.body);
-        await newExpense.save();
-        res.json(newExpense);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+// 5. נתיבים נוספים
+app.get('/expenses', async (req, res) => {
+    const data = await Expense.find().sort({ date: -1 });
+    res.json(data);
 });
 
-// 4. מחיקת הוצאה לפי ID
 app.delete('/expense/:id', async (req, res) => {
-    try {
-        await Expense.findByIdAndDelete(req.params.id);
-        res.json({ message: "Expense deleted successfully" });
-    } catch (err) {
-        res.status(500).json({ error: "Failed to delete" });
-    }
+    await Expense.findByIdAndDelete(req.params.id);
+    res.json({ success: true });
 });
 
-// --- הפעלת השרת ---
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`🚀 Server is running on http://localhost:${PORT}`);
-});
+const PORT = 3000;
+app.listen(PORT, () => console.log(`🚀 השרת רץ בפורט ${PORT}`));

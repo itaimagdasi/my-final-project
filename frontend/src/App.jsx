@@ -1,20 +1,84 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react';
+import { 
+  PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend 
+} from 'recharts';
 
+// --- 1. רכיב הגרף עם לוגיקה לניקוי נתונים ---
+const ExpenseChart = ({ expenses }) => {
+  const prepareData = () => {
+    // מפה לאיחוד קטגוריות (נורמליזציה)
+    const categoryMap = {
+      'Food': 'אוכל',
+      'מזון': 'אוכל',
+      'General': 'כללי',
+      'Leisure': 'פנאי',
+      'Transport': 'תחבורה'
+    };
+
+    const summary = expenses.reduce((acc, exp) => {
+      // סינון נתונים פגומים (כדי למנוע NaN בגרף)
+      if (!exp.amount || isNaN(exp.amount)) return acc;
+
+      // איחוד שמות קטגוריות
+      let cat = exp.category || 'כללי';
+      if (categoryMap[cat]) cat = categoryMap[cat];
+
+      acc[cat] = (acc[cat] || 0) + exp.amount;
+      return acc;
+    }, {});
+
+    return Object.keys(summary).map(key => ({
+      name: key,
+      value: summary[key]
+    }));
+  };
+
+  const data = prepareData();
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
+
+  if (expenses.length === 0) return <p>אין עדיין נתונים להצגה בגרף</p>;
+
+  return (
+    <div style={{ width: '100%', height: 350, marginBottom: '40px', textAlign: 'center' }}>
+      <h3>📊 התפלגות הוצאות חכמה</h3>
+      <ResponsiveContainer>
+        <PieChart>
+          <Pie
+            data={data}
+            cx="50%"
+            cy="50%"
+            innerRadius={60}
+            outerRadius={90}
+            paddingAngle={5}
+            dataKey="value"
+            label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+          >
+            {data.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+            ))}
+          </Pie>
+          <Tooltip />
+          <Legend verticalAlign="bottom" height={36}/>
+        </PieChart>
+      </ResponsiveContainer>
+    </div>
+  );
+};
+
+// --- 2. הרכיב הראשי של האפליקציה ---
 function App() {
   const [expenses, setExpenses] = useState([]);
-  const [aiText, setAiText] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [inputText, setInputText] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  // 1. משיכת נתונים מהשרת
+  // משיכת נתונים מהשרת
   const fetchExpenses = async () => {
     try {
       const res = await fetch('http://localhost:3000/expenses');
       const data = await res.json();
-      setExpenses(Array.isArray(data) ? data : []);
+      setExpenses(data);
     } catch (err) {
-      console.error("שגיאה במשיכת נתונים:", err);
-    } finally {
-      setLoading(false);
+      console.error("Error fetching:", err);
     }
   };
 
@@ -22,116 +86,109 @@ function App() {
     fetchExpenses();
   }, []);
 
-  // 2. הוספת הוצאה חכמה (Mock AI)
-  const addAiExpense = async () => {
-    if (!aiText.trim()) return;
-    
+  // שליחה ל-AI
+  const handleAIAdd = async () => {
+    if (!inputText.trim()) return;
+    setLoading(true);
     try {
-      await fetch('http://localhost:3000/add-ai-expense', {
+      const res = await fetch('http://localhost:3000/add-ai-expense', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: aiText })
+        body: JSON.stringify({ text: inputText })
       });
-      setAiText('');
-      fetchExpenses(); // רענון הרשימה
+      if (res.ok) {
+        setInputText("");
+        fetchExpenses();
+      }
     } catch (err) {
-      alert("שגיאה בשליחת הנתונים");
+      console.error("AI Error:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
-  // 3. מחיקת הוצאה
+  // מחיקה
   const deleteExpense = async (id) => {
     try {
       await fetch(`http://localhost:3000/expense/${id}`, { method: 'DELETE' });
       fetchExpenses();
     } catch (err) {
-      alert("שגיאה במחיקה");
+      console.error("Delete failed:", err);
     }
   };
 
-  // חישוב סה"כ הוצאות
-  const total = expenses.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
-
   return (
-    <div style={styles.container}>
-      <header style={styles.header}>
-        <h1 style={styles.title}>SmartExpense AI 💰</h1>
-        <div style={styles.totalCard}>
-          <span style={styles.totalLabel}>סה"כ הוצאות:</span>
-          <span style={styles.totalAmount}>{total.toLocaleString()} ₪</span>
-        </div>
-      </header>
+    <div style={{ maxWidth: '900px', margin: '0 auto', padding: '20px', direction: 'rtl', fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif' }}>
+      <h1 style={{ textAlign: 'center' }}>💰 ניהול הוצאות חכם</h1>
 
-      <div style={styles.aiSection}>
-        <h3 style={{ marginTop: 0, color: '#2c3e50' }}>✨ הוספה מהירה</h3>
-        <div style={styles.inputGroup}>
+      {/* אזור הזנה */}
+      <div style={{ background: '#f9f9f9', padding: '25px', borderRadius: '12px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', marginBottom: '30px' }}>
+        <div style={{ display: 'flex', gap: '10px' }}>
           <input 
-            style={styles.input} 
-            placeholder="למשל: 'סושי ב-120 שקל'..." 
-            value={aiText}
-            onChange={(e) => setAiText(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && addAiExpense()}
+            type="text" 
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            placeholder="מה קנית היום? (למשל: סושי ב-120 שקלים)"
+            style={{ flex: 1, padding: '12px', borderRadius: '6px', border: '1px solid #ddd', fontSize: '16px' }}
           />
-          <button onClick={addAiExpense} style={styles.button}>הוסף</button>
+          <button 
+            onClick={handleAIAdd} 
+            disabled={loading}
+            style={{ 
+              padding: '12px 24px', 
+              borderRadius: '6px', 
+              border: 'none', 
+              backgroundColor: loading ? '#ccc' : '#4CAF50', 
+              color: 'white', 
+              fontWeight: 'bold', 
+              cursor: loading ? 'not-allowed' : 'pointer' 
+            }}
+          >
+            {loading ? 'מנתח...' : 'הוספה חכמה'}
+          </button>
         </div>
       </div>
 
-      <div style={styles.listSection}>
-        <h3 style={styles.sectionTitle}>היסטוריית הוצאות</h3>
-        {loading ? (
-          <p style={{ textAlign: 'center' }}>טוען נתונים...</p>
-        ) : (
-          <div style={styles.list}>
-            {expenses.length === 0 ? (
-              <p style={styles.emptyMsg}>אין עדיין הוצאות. נסה להוסיף משהו למעלה!</p>
-            ) : (
-              expenses.map(exp => (
-                <div key={exp._id} style={styles.card}>
-                  <div style={styles.cardRight}>
-                    <div style={styles.itemTitle}>{exp.item}</div>
-                    <div style={styles.itemMeta}>
-                      <span style={styles.tag}>{exp.category}</span>
-                      <span style={styles.dot}>•</span>
-                      <span>{new Date(exp.date).toLocaleDateString('he-IL')}</span>
-                    </div>
-                  </div>
-                  <div style={styles.cardLeft}>
-                    <span style={styles.itemAmount}>{exp.amount} ₪</span>
-                    <button onClick={() => deleteExpense(exp._id)} style={styles.deleteBtn}>🗑️</button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        )}
+      {/* הגרף */}
+      <ExpenseChart expenses={expenses} />
+
+      {/* טבלת הנתונים */}
+      <div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', padding: '20px' }}>
+        <h3 style={{ borderBottom: '2px solid #eee', paddingBottom: '10px' }}>רשימת הוצאות אחרונות</h3>
+        <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '10px' }}>
+          <thead>
+            <tr style={{ backgroundColor: '#f8f9fa' }}>
+              <th style={{ padding: '12px', textAlign: 'right' }}>פריט</th>
+              <th style={{ padding: '12px', textAlign: 'right' }}>סכום</th>
+              <th style={{ padding: '12px', textAlign: 'right' }}>קטגוריה</th>
+              <th style={{ padding: '12px', textAlign: 'center' }}>פעולות</th>
+            </tr>
+          </thead>
+          <tbody>
+            {expenses.map((exp) => (
+              <tr key={exp._id} style={{ borderBottom: '1px solid #eee' }}>
+                <td style={{ padding: '12px' }}>{exp.item || '---'}</td>
+                <td style={{ padding: '12px', fontWeight: 'bold' }}>{exp.amount ? `${exp.amount} ₪` : '---'}</td>
+                <td style={{ padding: '12px' }}>
+                  <span style={{ background: '#e3f2fd', padding: '4px 8px', borderRadius: '4px', fontSize: '0.9em' }}>
+                    {exp.category || 'כללי'}
+                  </span>
+                </td>
+                <td style={{ padding: '12px', textAlign: 'center' }}>
+                  <button 
+                    onClick={() => deleteExpense(exp._id)} 
+                    style={{ color: '#ff4444', border: 'none', background: 'none', cursor: 'pointer', fontWeight: 'bold' }}
+                  >
+                    מחק
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
-  )
+  );
 }
-
-// עיצוב (CSS-in-JS)
-const styles = {
-  container: { padding: '20px', maxWidth: '500px', margin: '0 auto', fontFamily: 'system-ui, -apple-system, sans-serif', direction: 'rtl', color: '#2c3e50' },
-  header: { textAlign: 'center', marginBottom: '30px' },
-  title: { fontSize: '28px', marginBottom: '20px' },
-  totalCard: { background: 'linear-gradient(135deg, #2ecc71, #27ae60)', color: 'white', padding: '20px', borderRadius: '16px', boxShadow: '0 10px 20px rgba(46, 204, 113, 0.2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-  totalLabel: { fontSize: '18px', opacity: 0.9 },
-  totalAmount: { fontSize: '28px', fontWeight: 'bold' },
-  aiSection: { background: '#f8f9fa', padding: '20px', borderRadius: '16px', marginBottom: '30px', border: '1px solid #e9ecef' },
-  inputGroup: { display: 'flex', gap: '10px' },
-  input: { flex: 1, padding: '12px 15px', borderRadius: '10px', border: '1px solid #ddd', fontSize: '16px', outline: 'none' },
-  button: { padding: '10px 20px', background: '#3498db', color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold', transition: '0.2s' },
-  listSection: { marginTop: '20px' },
-  sectionTitle: { borderBottom: '2px solid #f1f1f1', paddingBottom: '10px', marginBottom: '20px' },
-  card: { background: 'white', padding: '15px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', border: '1px solid #f8f9fa' },
-  cardRight: { display: 'flex', flexDirection: 'column', gap: '5px' },
-  itemTitle: { fontSize: '18px', fontWeight: '600' },
-  itemMeta: { fontSize: '13px', color: '#95a5a6', display: 'flex', alignItems: 'center', gap: '8px' },
-  tag: { background: '#ecf0f1', padding: '2px 8px', borderRadius: '4px', color: '#7f8c8d' },
-  itemAmount: { fontSize: '18px', fontWeight: 'bold', marginLeft: '15px' },
-  cardLeft: { display: 'flex', alignItems: 'center' },
-  deleteBtn: { background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', opacity: 0.6 },
-  emptyMsg: { textAlign: 'center', color: '#bdc3c7', marginTop: '40px' }
-};
 
 export default App;
