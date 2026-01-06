@@ -1,0 +1,7 @@
+POST http://localhost:3000/add-expense
+Content-Type: application/json
+
+{
+  "item": "Pizza",
+  "amount": 50
+}

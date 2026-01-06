@@ -1,0 +1,75 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\itaim\\source\\repos\\MyFinalProject\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{838CA66E-C21B-4F86-88A4-D27FEF8E30EA}|MyFinalProject.vcxproj|C:\\Users\\itaim\\source\\repos\\MyFinalProject\\index.js||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "RelativeMoniker": "D:0:0:{838CA66E-C21B-4F86-88A4-D27FEF8E30EA}|MyFinalProject.vcxproj|solutionrelative:index.js||{3B902123-F8A7-4915-9F01-361F908088D0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{838CA66E-C21B-4F86-88A4-D27FEF8E30EA}|MyFinalProject.vcxproj|C:\\Users\\itaim\\source\\repos\\MyFinalProject\\test.js||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "RelativeMoniker": "D:0:0:{838CA66E-C21B-4F86-88A4-D27FEF8E30EA}|MyFinalProject.vcxproj|solutionrelative:test.js||{3B902123-F8A7-4915-9F01-361F908088D0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{838CA66E-C21B-4F86-88A4-D27FEF8E30EA}|MyFinalProject.vcxproj|C:\\Users\\itaim\\source\\repos\\MyFinalProject\\test2.http||{5703B403-55E7-4C63-8C88-A8F52C7A45C5}",
+      "RelativeMoniker": "D:0:0:{838CA66E-C21B-4F86-88A4-D27FEF8E30EA}|MyFinalProject.vcxproj|solutionrelative:test2.http||{5703B403-55E7-4C63-8C88-A8F52C7A45C5}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 3,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "test2.http",
+              "DocumentMoniker": "C:\\Users\\itaim\\source\\repos\\MyFinalProject\\test2.http",
+              "RelativeDocumentMoniker": "test2.http",
+              "ToolTip": "C:\\Users\\itaim\\source\\repos\\MyFinalProject\\test2.http",
+              "RelativeToolTip": "test2.http",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAsAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003502|",
+              "WhenOpened": "2026-01-05T20:24:21.058Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{aa2115a1-9712-457b-9047-dbb71ca2cdd2}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "test.js",
+              "DocumentMoniker": "C:\\Users\\itaim\\source\\repos\\MyFinalProject\\test.js",
+              "RelativeDocumentMoniker": "test.js",
+              "ToolTip": "C:\\Users\\itaim\\source\\repos\\MyFinalProject\\test.js",
+              "RelativeToolTip": "test.js",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAYAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001646|",
+              "WhenOpened": "2026-01-05T20:17:13.206Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "index.js",
+              "DocumentMoniker": "C:\\Users\\itaim\\source\\repos\\MyFinalProject\\index.js",
+              "RelativeDocumentMoniker": "index.js",
+              "ToolTip": "C:\\Users\\itaim\\source\\repos\\MyFinalProject\\index.js*",
+              "RelativeToolTip": "index.js*",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABkAAAADAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001646|",
+              "WhenOpened": "2026-01-05T20:13:39.952Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
