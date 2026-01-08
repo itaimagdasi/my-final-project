@@ -11,3 +11,7 @@ A Full-Stack application built during my CS studies to manage expenses using AI.
 - **Backend**: Node.js, Express
 - **AI**: Google Gemini API
 - **Database**: MongoDB Atlas
+
+
+## 📸 App Preview
+![Smart Expense Tracker Demo](/app.image.png)
