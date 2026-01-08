@@ -14,7 +14,7 @@ const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemi
 // MongoDB Connection
 mongoose.connect(process.env.MONGO_URI)
     .then(() => console.log("✅ Connected to MongoDB"))
-    .catch(err => console.error("❌ MongoDB Connection Error:", err));
+    .catch(err => console.error("❌ MongoDB Error:", err));
 
 const Expense = mongoose.model('Expense', {
     item: String,
@@ -23,30 +23,31 @@ const Expense = mongoose.model('Expense', {
     date: { type: Date, default: Date.now }
 });
 
-// Strict English AI Parser
+// --- New Feature: Clear All Expenses ---
+app.delete('/expenses/clear-all', async (req, res) => {
+    try {
+        await Expense.deleteMany({}); // מוחק את כל המסמכים באוסף
+        res.json({ success: true, message: "All records deleted" });
+    } catch (err) {
+        res.status(500).json({ error: "Failed to clear database" });
+    }
+});
+
+// AI Analysis Logic
 async function getAIAnalysis(text) {
     const payload = {
         contents: [{
             parts: [{
-                text: `Analyze this text: "${text}". 
-                Convert it into a JSON array of objects.
-                Rules:
-                1. "item": Product name in English.
-                2. "amount": Extract the number exactly as it appears. DO NOT convert currency values.
-                3. "category": Food, Leisure, Transport, or General.
-                Return ONLY raw JSON array.`
+                text: `Analyze: "${text}". Convert to JSON array. item (English), amount (number), category (Food, Leisure, Transport, or General). Return ONLY JSON.`
             }]
         }]
     };
-
     const response = await fetch(GEMINI_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
     });
-
     const data = await response.json();
-    if (!response.ok) throw new Error(data.error?.message || "AI Error");
     return data.candidates[0].content.parts[0].text;
 }
 
@@ -57,15 +58,10 @@ app.post('/add-ai-expense', async (req, res) => {
         const cleaned = aiResponse.replace(/```json/g, "").replace(/```/g, "").trim();
         const aiResults = JSON.parse(cleaned);
         const resultsArray = Array.isArray(aiResults) ? aiResults : [aiResults];
-
-        // Validation to prevent empty rows
         const validData = resultsArray.filter(exp => exp.item && exp.amount > 0);
-        
         const saved = await Expense.insertMany(validData);
         res.json(saved);
-    } catch (err) {
-        res.status(500).json({ error: "Failed to parse expense" });
-    }
+    } catch (err) { res.status(500).json({ error: "AI Parsing failed" }); }
 });
 
 app.get('/expenses', async (req, res) => {
@@ -78,4 +74,4 @@ app.delete('/expense/:id', async (req, res) => {
     res.json({ success: true });
 });
 
-app.listen(3000, () => console.log("🚀 Server running on http://localhost:3000"));
+app.listen(3000, () => console.log("🚀 Server running on port 3000"));
