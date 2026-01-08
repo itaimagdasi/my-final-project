@@ -17,7 +17,8 @@ Managing expenses shouldn't be a chore. This application allows users to add exp
 - **Database**: MongoDB Atlas.
 - **AI Engine**: Google Gemini API (1.5 Flash).
 
-
+## 📸 App Preview
+![Smart Expense Tracker Demo](/app.image.png)
 
 ## 🛠️ Setup
 1. Clone the repo: `git clone https://github.com/itaimagdasi/my-final-project.git`
